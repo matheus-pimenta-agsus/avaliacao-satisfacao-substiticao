@@ -352,7 +352,109 @@
     gap: 5px;
   }
 
-  /* CONTADOR pós-envio */
+  /* ESTADO: AGUARDANDO (Kobo aberto em outra aba) */
+  #estado-aguardando {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1.25rem;
+    max-width: 460px;
+    padding: 2.5rem 2rem;
+    background: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    border-radius: 16px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .aguardando-icone {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--azul-claro);
+    border: 2px solid #B5D4F4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+
+  #estado-aguardando h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--cinza-texto);
+  }
+
+  #estado-aguardando p {
+    font-size: 14px;
+    color: var(--cinza-secundario);
+    line-height: 1.65;
+  }
+
+  .passos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+  }
+
+  .passo {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--cinza-secundario);
+    line-height: 1.5;
+  }
+
+  .passo-num {
+    min-width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--verde);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+
+  .btn-ja-respondi {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--verde);
+    color: white;
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 28px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn-ja-respondi:hover { background: var(--verde-claro); }
+
+  .btn-reabrir {
+    font-size: 13px;
+    color: var(--verde);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ESTADO: OBRIGADO */
   #estado-obrigado {
     display: none;
     flex-direction: column;
@@ -409,9 +511,7 @@
     transition: background 0.2s;
   }
 
-  .btn-nova-avaliacao:hover {
-    background: var(--verde-medio);
-  }
+  .btn-nova-avaliacao:hover { background: var(--verde-medio); }
 
   /* FOOTER */
   footer {
@@ -511,6 +611,25 @@
     </div>
   </div>
 
+  <!-- AGUARDANDO (Kobo aberto em outra aba) -->
+  <div id="estado-aguardando">
+    <div class="aguardando-icone">📋</div>
+    <h2>O formulário foi aberto em outra aba</h2>
+    <p>Responda a avaliação na outra aba do seu navegador e depois volte aqui.</p>
+    <div class="passos">
+      <div class="passo">
+        <span class="passo-num">1</span>
+        <span>Vá para a aba do formulário que acabou de abrir e responda as perguntas</span>
+      </div>
+      <div class="passo">
+        <span class="passo-num">2</span>
+        <span>Após enviar, volte para esta aba e clique no botão abaixo</span>
+      </div>
+    </div>
+    <button class="btn-ja-respondi" onclick="mostrarObrigado()">✓ Já respondi a avaliação</button>
+    <button class="btn-reabrir" id="btn-reabrir-kobo">Reabrir o formulário</button>
+  </div>
+
   <!-- OBRIGADO (pós-retorno do Kobo) -->
   <div id="estado-obrigado">
     <div class="obrigado-icone">✅</div>
@@ -532,11 +651,7 @@
 
 <script>
   // ─── CONFIGURAÇÃO ───────────────────────────────────────────────
-  // Substitua pela URL de publicação CSV da sua planilha Google Sheets
-  // Planilha → Arquivo → Compartilhar → Publicar na web → CSV
   const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRojDaFntIyB1ye5vis9a1bNdUcFRPyge5Z2xzI50KuunUwVbc2VP9pCjD5o_2iaybGDnEI0NIcmho8/pub?gid=0&single=true&output=csv';
-
-  // Coluna identificadora na planilha
   const COL_ID        = 'id_unidade';
   const COL_MEDICO    = 'nome_medico';
   const COL_UBS       = 'nome_ubs';
@@ -547,20 +662,23 @@
   // ────────────────────────────────────────────────────────────────
 
   const $ = id => document.getElementById(id);
+  const ESTADOS = ['estado-carregando','estado-erro','estado-pronto','estado-aguardando','estado-obrigado'];
+  let linkKoboAtual = '#';
+  let idAtual = '';
 
   function mostrar(id) {
-    ['estado-carregando','estado-erro','estado-pronto','estado-obrigado']
-      .forEach(s => {
-        const el = $(s);
-        el.style.display = (s === id) ? 'flex' : 'none';
-      });
+    ESTADOS.forEach(s => $(s).style.display = (s === id) ? 'flex' : 'none');
+  }
+
+  function mostrarObrigado() {
+    $('btn-nova').href = `?id=${idAtual}`;
+    mostrar('estado-obrigado');
   }
 
   function parseCSV(text) {
     const linhas = text.trim().split('\n');
     const cabecalho = linhas[0].split(',').map(c => c.trim().replace(/^"|"$/g,''));
     return linhas.slice(1).map(linha => {
-      // Suporta campos com vírgula dentro de aspas
       const cols = [];
       let atual = '', dentro = false;
       for (let ch of linha) {
@@ -575,55 +693,57 @@
     });
   }
 
+  function abrirKobo() {
+    window.open(linkKoboAtual, '_blank');
+    mostrar('estado-aguardando');
+    // Detecta quando o paciente volta para esta aba
+    window.addEventListener('focus', function aoVoltar() {
+      // Mantém no estado aguardando — paciente confirma clicando no botão
+      window.removeEventListener('focus', aoVoltar);
+    }, { once: true });
+  }
+
   async function init() {
     mostrar('estado-carregando');
-
-    // Lê parâmetros da URL
     const params = new URLSearchParams(window.location.search);
-    const idUnidade = params.get('id');
+    idAtual = params.get('id') || '';
 
-    // Detectar retorno do Kobo (?obrigado=1)
-    if (params.get('obrigado') === '1' && idUnidade) {
-      $('btn-nova').href = `?id=${idUnidade}`;
-      mostrar('estado-obrigado');
-      return;
-    }
-
-    if (!idUnidade) {
+    if (!idAtual) {
       $('msg-erro').textContent = 'Nenhum identificador de consulta encontrado na URL. Verifique o link recebido.';
       mostrar('estado-erro');
       return;
     }
 
-    // Busca dados da planilha
     try {
       const resp = await fetch(SHEET_CSV_URL);
       if (!resp.ok) throw new Error('Falha ao buscar planilha');
       const texto = await resp.text();
       const dados = parseCSV(texto);
-      const linha = dados.find(r => r[COL_ID] === idUnidade);
+      const linha = dados.find(r => r[COL_ID] === idAtual);
 
       if (!linha) {
-        $('msg-erro').textContent = `Não encontramos dados para o código "${idUnidade}". Verifique o link ou contate a equipe de saúde.`;
+        $('msg-erro').textContent = `Não encontramos dados para o código "${idAtual}". Verifique o link ou contate a equipe de saúde.`;
         mostrar('estado-erro');
         return;
       }
 
-      // Preenche o card
-      $('nome-medico').textContent  = linha[COL_MEDICO]    || '—';
-      $('nome-ubs').textContent     = linha[COL_UBS]       || '—';
-      $('nome-esf').textContent     = linha[COL_ESF]       || '—';
+      $('nome-medico').textContent    = linha[COL_MEDICO]    || '—';
+      $('nome-ubs').textContent       = linha[COL_UBS]       || '—';
+      $('nome-esf').textContent       = linha[COL_ESF]       || '—';
       $('nome-municipio').textContent = linha[COL_MUNICIPIO] || '—';
-      $('nome-uf').textContent      = linha[COL_UF]        || '—';
+      $('nome-uf').textContent        = linha[COL_UF]        || '—';
 
-      // Monta link do Kobo com parâmetro de retorno
-      const linkKobo = linha[COL_LINK] || '';
-      const retorno  = encodeURIComponent(`${window.location.origin}${window.location.pathname}?id=${idUnidade}&obrigado=1`);
-      const linkFinal = linkKobo.includes('?')
-        ? `${linkKobo}&return_url=${retorno}`
-        : `${linkKobo}?return_url=${retorno}`;
+      linkKoboAtual = linha[COL_LINK] || '#';
 
-      $('btn-ir-kobo').href = linkFinal;
+      // Botão principal abre Kobo em nova aba e muda estado
+      $('btn-ir-kobo').removeAttribute('href');
+      $('btn-ir-kobo').addEventListener('click', e => { e.preventDefault(); abrirKobo(); });
+
+      // Botão "reabrir" no estado aguardando
+      $('btn-reabrir-kobo').addEventListener('click', () => {
+        window.open(linkKoboAtual, '_blank');
+      });
+
       mostrar('estado-pronto');
 
     } catch (e) {
