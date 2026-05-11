@@ -694,13 +694,16 @@
   }
 
   function abrirKobo() {
-    window.open(linkKoboAtual, '_blank');
+    const abaKobo = window.open(linkKoboAtual, '_blank');
     mostrar('estado-aguardando');
-    // Detecta quando o paciente volta para esta aba
-    window.addEventListener('focus', function aoVoltar() {
-      // Mantém no estado aguardando — paciente confirma clicando no botão
-      window.removeEventListener('focus', aoVoltar);
-    }, { once: true });
+
+    // Monitora automaticamente se a aba do Kobo foi fechada
+    const verificar = setInterval(() => {
+      if (abaKobo && abaKobo.closed) {
+        clearInterval(verificar);
+        mostrarObrigado();
+      }
+    }, 1000);
   }
 
   async function init() {
