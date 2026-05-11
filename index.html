@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avaliação de Consulta — AgSUS | Núcleo de Saúde Digital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --verde: #1B6E4B;
+    --verde-claro: #2A9464;
+    --verde-suave: #E8F5EE;
+    --verde-medio: #C2E5D1;
+    --azul: #1A5EA8;
+    --azul-claro: #E8F0FA;
+    --cinza-texto: #2C2C2A;
+    --cinza-secundario: #5F5E5A;
+    --cinza-borda: #D3D1C7;
+    --branco: #FFFFFF;
+    --bg: #F7F9F7;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--cinza-texto);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--branco);
+    border-bottom: 1px solid var(--cinza-borda);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .header-logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-img {
+    height: 36px;
+    object-fit: contain;
+  }
+
+  .header-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--cinza-borda);
+  }
+
+  .header-nsd {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header-nsd span:first-child {
+    font-family: 'Sora', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--verde);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .header-nsd span:last-child {
+    font-size: 11px;
+    color: var(--cinza-secundario);
+  }
+
+  .header-sus-badge {
+    font-family: 'Sora', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--azul);
+    background: var(--azul-claro);
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+  }
+
+  /* MAIN */
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3rem 1.5rem 4rem;
+  }
+
+  /* ESTADO: CARREGANDO */
+  #estado-carregando {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    min-height: 320px;
+    color: var(--cinza-secundario);
+    font-size: 15px;
+  }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--verde-medio);
+    border-top-color: var(--verde);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ESTADO: ERRO */
+  #estado-erro {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    max-width: 420px;
+    padding: 2.5rem 2rem;
+    background: var(--branco);
+    border: 1px solid #F0C0C0;
+    border-radius: 16px;
+  }
+
+  .erro-icone {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #FEF0F0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+
+  #estado-erro h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: #A32D2D;
+  }
+
+  #estado-erro p {
+    font-size: 14px;
+    color: var(--cinza-secundario);
+    line-height: 1.6;
+  }
+
+  /* CARD PRINCIPAL */
+  #estado-pronto {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 520px;
+    gap: 1.5rem;
+    animation: fadeUp 0.5s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Topo verde */
+  .card-topo {
+    width: 100%;
+    background: var(--verde);
+    border-radius: 16px 16px 0 0;
+    padding: 2rem 2rem 1.75rem;
+    color: var(--branco);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-topo::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+  }
+
+  .card-topo::after {
+    content: '';
+    position: absolute;
+    bottom: -20px;
+    right: 60px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+  }
+
+  .consulta-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 6px;
+  }
+
+  .medico-nome {
+    font-family: 'Sora', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--branco);
+    margin-bottom: 1.25rem;
+    line-height: 1.3;
+    position: relative;
+  }
+
+  .infos-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    position: relative;
+  }
+
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .info-rotulo {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+  }
+
+  .info-valor {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.92);
+    line-height: 1.4;
+  }
+
+  /* Corpo do card */
+  .card-corpo {
+    width: 100%;
+    background: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    border-top: none;
+    border-radius: 0 0 16px 16px;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    text-align: center;
+  }
+
+  .icone-consulta {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--verde-suave);
+    border: 2px solid var(--verde-medio);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+  }
+
+  .card-corpo h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--cinza-texto);
+    line-height: 1.4;
+  }
+
+  .card-corpo p {
+    font-size: 14px;
+    color: var(--cinza-secundario);
+    line-height: 1.65;
+    max-width: 380px;
+  }
+
+  /* BOTÃO */
+  .btn-avaliar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--verde);
+    color: var(--branco);
+    font-family: 'Sora', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px 32px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+    width: 100%;
+    max-width: 320px;
+    letter-spacing: 0.01em;
+  }
+
+  .btn-avaliar:hover {
+    background: var(--verde-claro);
+    transform: translateY(-1px);
+  }
+
+  .btn-avaliar:active {
+    transform: translateY(0);
+  }
+
+  .btn-seta {
+    font-size: 18px;
+    transition: transform 0.2s;
+  }
+
+  .btn-avaliar:hover .btn-seta {
+    transform: translateX(4px);
+  }
+
+  /* Nota discreta */
+  .nota-privacidade {
+    font-size: 12px;
+    color: var(--cinza-secundario);
+    opacity: 0.75;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* CONTADOR pós-envio */
+  #estado-obrigado {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1.25rem;
+    max-width: 420px;
+    padding: 2.5rem 2rem;
+    background: var(--branco);
+    border: 1px solid var(--verde-medio);
+    border-radius: 16px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .obrigado-icone {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--verde-suave);
+    border: 2px solid var(--verde-medio);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+
+  #estado-obrigado h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--verde);
+  }
+
+  #estado-obrigado p {
+    font-size: 14px;
+    color: var(--cinza-secundario);
+    line-height: 1.65;
+  }
+
+  .btn-nova-avaliacao {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--verde-suave);
+    color: var(--verde);
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 50px;
+    border: 1.5px solid var(--verde-medio);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+
+  .btn-nova-avaliacao:hover {
+    background: var(--verde-medio);
+  }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 12px;
+    color: var(--cinza-secundario);
+    border-top: 1px solid var(--cinza-borda);
+    background: var(--branco);
+  }
+
+  footer a {
+    color: var(--verde);
+    text-decoration: none;
+  }
+
+  /* Responsivo */
+  @media (max-width: 480px) {
+    header { padding: 0 1rem; }
+    .header-sus-badge { display: none; }
+    .infos-grid { grid-template-columns: 1fr; gap: 8px; }
+    .medico-nome { font-size: 19px; }
+    main { padding: 2rem 1rem 3rem; }
+    .card-topo { padding: 1.5rem; }
+    .card-corpo { padding: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-logo">
+    <img
+      src="https://agenciasus.org.br/wp-content/uploads/2023/12/Logo-AgSUS_2023.png"
+      alt="AgSUS"
+      class="logo-img"
+      onerror="this.style.display='none'"
+    >
+    <div class="header-divider"></div>
+    <div class="header-nsd">
+      <span>Núcleo de Saúde Digital</span>
+      <span>Substituição Temporária de Médicos</span>
+    </div>
+  </div>
+  <span class="header-sus-badge">SUS Digital</span>
+</header>
+
+<main>
+
+  <!-- CARREGANDO -->
+  <div id="estado-carregando">
+    <div class="spinner"></div>
+    <span>Carregando informações da consulta…</span>
+  </div>
+
+  <!-- ERRO -->
+  <div id="estado-erro">
+    <div class="erro-icone">⚠️</div>
+    <h2>Link inválido ou expirado</h2>
+    <p id="msg-erro">Não foi possível identificar a consulta. Verifique o link recebido ou entre em contato com a equipe de saúde.</p>
+  </div>
+
+  <!-- PRONTO -->
+  <div id="estado-pronto">
+    <div class="card-topo">
+      <div class="consulta-label">Sua teleconsulta foi com</div>
+      <div class="medico-nome" id="nome-medico">—</div>
+      <div class="infos-grid">
+        <div class="info-item">
+          <span class="info-rotulo">Unidade de Saúde</span>
+          <span class="info-valor" id="nome-ubs">—</span>
+        </div>
+        <div class="info-item">
+          <span class="info-rotulo">Equipe de Saúde da Família</span>
+          <span class="info-valor" id="nome-esf">—</span>
+        </div>
+        <div class="info-item">
+          <span class="info-rotulo">Município</span>
+          <span class="info-valor" id="nome-municipio">—</span>
+        </div>
+        <div class="info-item">
+          <span class="info-rotulo">Estado (UF)</span>
+          <span class="info-valor" id="nome-uf">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-corpo">
+      <div class="icone-consulta">📋</div>
+      <h2>Como foi o seu atendimento?</h2>
+      <p>Sua opinião é muito importante para melhorarmos os serviços de saúde digital do SUS. A avaliação leva menos de 2 minutos.</p>
+      <a id="btn-ir-kobo" class="btn-avaliar" href="#" target="_blank">
+        Avaliar minha consulta
+        <span class="btn-seta">→</span>
+      </a>
+      <span class="nota-privacidade">🔒 Suas respostas são confidenciais</span>
+    </div>
+  </div>
+
+  <!-- OBRIGADO (pós-retorno do Kobo) -->
+  <div id="estado-obrigado">
+    <div class="obrigado-icone">✅</div>
+    <h2>Obrigado pela sua avaliação!</h2>
+    <p>Sua resposta foi registrada com sucesso. O Núcleo de Saúde Digital da AgSUS agradece sua participação na melhoria do SUS.</p>
+    <a id="btn-nova" class="btn-nova-avaliacao" href="#">
+      ↩ Avaliar outra consulta
+    </a>
+  </div>
+
+</main>
+
+<footer>
+  <p>
+    <strong>AgSUS</strong> — Agência Brasileira de Apoio à Gestão do SUS &nbsp;·&nbsp;
+    <a href="https://agenciasus.org.br/nucleodesaudedigital" target="_blank">Núcleo de Saúde Digital</a>
+  </p>
+</footer>
+
+<script>
+  // ─── CONFIGURAÇÃO ───────────────────────────────────────────────
+  // Substitua pela URL de publicação CSV da sua planilha Google Sheets
+  // Planilha → Arquivo → Compartilhar → Publicar na web → CSV
+  const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRojDaFntIyB1ye5vis9a1bNdUcFRPyge5Z2xzI50KuunUwVbc2VP9pCjD5o_2iaybGDnEI0NIcmho8/pub?gid=0&single=true&output=csv';
+
+  // Coluna identificadora na planilha
+  const COL_ID        = 'id_unidade';
+  const COL_MEDICO    = 'nome_medico';
+  const COL_UBS       = 'nome_ubs';
+  const COL_ESF       = 'nome_eSF';
+  const COL_UF        = 'nome_uf';
+  const COL_MUNICIPIO = 'nome_municipio';
+  const COL_LINK      = 'link';
+  // ────────────────────────────────────────────────────────────────
+
+  const $ = id => document.getElementById(id);
+
+  function mostrar(id) {
+    ['estado-carregando','estado-erro','estado-pronto','estado-obrigado']
+      .forEach(s => {
+        const el = $(s);
+        el.style.display = (s === id) ? 'flex' : 'none';
+      });
+  }
+
+  function parseCSV(text) {
+    const linhas = text.trim().split('\n');
+    const cabecalho = linhas[0].split(',').map(c => c.trim().replace(/^"|"$/g,''));
+    return linhas.slice(1).map(linha => {
+      // Suporta campos com vírgula dentro de aspas
+      const cols = [];
+      let atual = '', dentro = false;
+      for (let ch of linha) {
+        if (ch === '"') { dentro = !dentro; }
+        else if (ch === ',' && !dentro) { cols.push(atual.trim()); atual = ''; }
+        else atual += ch;
+      }
+      cols.push(atual.trim());
+      const obj = {};
+      cabecalho.forEach((h, i) => { obj[h] = (cols[i] || '').replace(/^"|"$/g,''); });
+      return obj;
+    });
+  }
+
+  async function init() {
+    mostrar('estado-carregando');
+
+    // Lê parâmetros da URL
+    const params = new URLSearchParams(window.location.search);
+    const idUnidade = params.get('id');
+
+    // Detectar retorno do Kobo (?obrigado=1)
+    if (params.get('obrigado') === '1' && idUnidade) {
+      $('btn-nova').href = `?id=${idUnidade}`;
+      mostrar('estado-obrigado');
+      return;
+    }
+
+    if (!idUnidade) {
+      $('msg-erro').textContent = 'Nenhum identificador de consulta encontrado na URL. Verifique o link recebido.';
+      mostrar('estado-erro');
+      return;
+    }
+
+    // Busca dados da planilha
+    try {
+      const resp = await fetch(SHEET_CSV_URL);
+      if (!resp.ok) throw new Error('Falha ao buscar planilha');
+      const texto = await resp.text();
+      const dados = parseCSV(texto);
+      const linha = dados.find(r => r[COL_ID] === idUnidade);
+
+      if (!linha) {
+        $('msg-erro').textContent = `Não encontramos dados para o código "${idUnidade}". Verifique o link ou contate a equipe de saúde.`;
+        mostrar('estado-erro');
+        return;
+      }
+
+      // Preenche o card
+      $('nome-medico').textContent  = linha[COL_MEDICO]    || '—';
+      $('nome-ubs').textContent     = linha[COL_UBS]       || '—';
+      $('nome-esf').textContent     = linha[COL_ESF]       || '—';
+      $('nome-municipio').textContent = linha[COL_MUNICIPIO] || '—';
+      $('nome-uf').textContent      = linha[COL_UF]        || '—';
+
+      // Monta link do Kobo com parâmetro de retorno
+      const linkKobo = linha[COL_LINK] || '';
+      const retorno  = encodeURIComponent(`${window.location.origin}${window.location.pathname}?id=${idUnidade}&obrigado=1`);
+      const linkFinal = linkKobo.includes('?')
+        ? `${linkKobo}&return_url=${retorno}`
+        : `${linkKobo}?return_url=${retorno}`;
+
+      $('btn-ir-kobo').href = linkFinal;
+      mostrar('estado-pronto');
+
+    } catch (e) {
+      console.error(e);
+      $('msg-erro').textContent = 'Erro ao carregar os dados. Tente novamente mais tarde ou entre em contato com a equipe de saúde.';
+      mostrar('estado-erro');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
